@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Loading and preprocessing the data</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h2>Loading and preprocessing the data</h2>
+
+<pre><code># unzip data and read 
+unzip(&quot;activity.zip&quot;)
+step.data &lt;- read.csv(&quot;activity.csv&quot;, header = TRUE)
+head(step.data)
+</code></pre>
+
+<pre><code>  steps       date interval
+1    NA 2012-10-01        0
+2    NA 2012-10-01        5
+3    NA 2012-10-01       10
+4    NA 2012-10-01       15
+5    NA 2012-10-01       20
+6    NA 2012-10-01       25
+</code></pre>
+
+<h2>What is mean total number of steps taken per day?</h2>
+
+<pre><code>data.date &lt;- step.data %&gt;% select(date, steps) %&gt;% group_by(date) %&gt;% summarize(tsteps= sum(steps)) %&gt;%na.omit()
+hist(data.date$tsteps, xlab = &quot;Total daily Steps&quot;,main=&quot;Histogram of Total Steps by day&quot;, breaks = 20)
+
+</code></pre>
+
+<p><img src="https://github.com/Rana-ElRobi/RepData_PeerAssessment1/blob/master/fig1-hist.png" alt="fig1.hist"/></p>
+
+<h2>What is the average daily activity pattern?</h2>
+
+<pre><code>mean(data.date$tsteps)
+## [1] 10766.19
+</code></pre>
+
+<pre><code>median(data.date$tsteps)
+## [1] 10765
+</code></pre>
+
+<h3>Time series plot</h3>
+
+<pre><code>data.interval &lt;- step.data%&gt;% select(interval, steps) %&gt;% na.omit() %&gt;% group_by(interval) %&gt;% summarize(tsteps= mean(steps)) 
+ggplot(data.interval, aes(x=interval, y=tsteps))+ geom_line()
+
+</code></pre>
+
+<p><img src="https://github.com/Rana-ElRobi/RepData_PeerAssessment1/blob/master/fig2-time.png" alt="fig2-time"/> </p>
+
+<h3>The 5-minute interval that, on average, contains the maximum number of steps</h3>
+
+<pre><code>five &lt;- data.interval[which(data.interval$tsteps== max(data.interval$tsteps)),]
+five
+</code></pre>
+
+<pre><code>## # A tibble: 1 x 2
+##   interval   tsteps
+##      &lt;int&gt;    &lt;dbl&gt;
+## 1      835 206.1698
+</code></pre>
+
+<h2>Imputing missing values</h2>
+
+<pre><code># make new version
+
+step.data.v2 &lt;- step.data
+NA.data &lt;- step.data.v2[is.na(step.data.v2$steps),]
+clean.data &lt;- step.data.v2[!is.na(step.data.v2$steps),]
+
+mean.data.interval &lt;- aggregate(clean.data$steps, by=list(clean.data$interval), sum)
+names(mean.data.interval)[1] =&quot;interval&quot;
+names(mean.data.interval)[2] =&quot;steps&quot;
+
+step.data.v2 &lt;- step.data
+missingData &lt;- is.na(step.data.v2$steps)
+meanVals &lt;- tapply(clean.data$steps, clean.data$interval, mean, na.rm=TRUE, simplify=TRUE)
+step.data.v2$steps[missingData] &lt;- meanVals[as.character(step.data.v2$interval[missingData])]
+
+# original missing data count
+
+sum(missingData)
+## [1] 2304
+
+# count of NA values
+sum(is.na(step.data.v2$steps))
+## [1] 0
+</code></pre>
+
+<p>Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.</p>
+
+<pre><code>full.SumData.Day &lt;- aggregate(step.data.v2$steps, by=list(step.data.v2$date), sum)
+
+names(full.SumData.Day)[1] =&quot;date&quot;
+names(full.SumData.Day)[2] =&quot;totalsteps&quot;
+head(full.SumData.Day,15)
+
+</code></pre>
+
+<pre><code>         date totalsteps
+1  2012-10-01   10766.19
+2  2012-10-02     126.00
+3  2012-10-03   11352.00
+4  2012-10-04   12116.00
+5  2012-10-05   13294.00
+6  2012-10-06   15420.00
+7  2012-10-07   11015.00
+8  2012-10-08   10766.19
+9  2012-10-09   12811.00
+10 2012-10-10    9900.00
+11 2012-10-11   10304.00
+12 2012-10-12   17382.00
+13 2012-10-13   12426.00
+14 2012-10-14   15098.00
+15 2012-10-15   10139.00
+</code></pre>
+
+<p>Plot histogram</p>
+
+<pre><code>hist(full.SumData.Day$totalsteps, xlab = &quot;Steps&quot;, ylab = &quot;Frequency&quot;, main = &quot;Total Daily Steps&quot;, breaks = 20)
+
+</code></pre>
+
+<p><img src="https://github.com/Rana-ElRobi/RepData_PeerAssessment1/blob/master/fig3-hist.png" alt="fig3-hist"/></p>
+
+<p>Overview data</p>
+
+<pre><code> summary(full.SumData.Day)
+#         date      totalsteps   
+# 2012-10-01: 1   Min.   :   41  
+# 2012-10-02: 1   1st Qu.: 9819  
+# 2012-10-03: 1   Median :10766  
+# 2012-10-04: 1   Mean   :10766  
+# 2012-10-05: 1   3rd Qu.:12811  
+# 2012-10-06: 1   Max.   :21194  
+# (Other)   :55   
+</code></pre>
+
+<p>Compare the mean and median of Old and New data</p>
+
+<pre><code>oldmean &lt;- mean(data.date$tsteps, na.rm = TRUE)
+newmean &lt;- mean(full.SumData.Day$totalsteps)
+
+# Old mean and New mean
+oldmean
+## [1] 10766.19
+newmean
+## [1] 10766.19
+</code></pre>
+
+<pre><code>oldmedian &lt;- median(data.date$tsteps, na.rm = TRUE)
+newmedian &lt;- median(full.SumData.Day$totalsteps)
+# Old median and New median
+oldmedian
+## [1] 10765
+newmedian
+## [1] 10766.19
+</code></pre>
+
+<h2>Are there differences in activity patterns between weekdays and weekends?</h2>
+
+<pre><code>step.data.v2$date &lt;- as.Date(step.data.v2$date)
+step.data.v2$weekday &lt;- weekdays(step.data.v2$date)
+step.data.v2$weekend &lt;- ifelse(step.data.v2$weekday==&quot;Saturday&quot; | step.data.v2$weekday==&quot;Sunday&quot;, &quot;Weekend&quot;, &quot;Weekday&quot; )
+</code></pre>
+
+<pre><code>mean.week.end.day &lt;- aggregate(step.data.v2$steps, by=list(step.data.v2$weekend, step.data.v2$interval), mean)
+names(mean.week.end.day)[1] =&quot;weekend&quot;
+names(mean.week.end.day)[2] =&quot;interval&quot;
+names(mean.week.end.day)[3] =&quot;steps&quot;
+</code></pre>
+
+<pre><code>ggplot(mean.week.end.day, aes(x = interval, y=steps, color=weekend)) +
+  geom_line() +
+  facet_grid(weekend ~ .) +
+  labs(title = &quot;Mean of Steps by Interval&quot;, x = &quot;interval&quot;, y = &quot;steps&quot;)
+</code></pre>
+
+<p><img src="https://github.com/Rana-ElRobi/RepData_PeerAssessment1/blob/master/fig4-hist.png" alt="fig4-hist"/></p>
+
+</body>
+
+</html>
